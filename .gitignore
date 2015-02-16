@@ -1,0 +1,14 @@
+*.tlog
+*.obj
+*.log
+*.exe
+*.ilk
+*.lastbuildstate
+*.pdb
+*.txt
+*.Debug
+*.Release
+*.sdf
+*.sln
+*.vcxproj
+*.filters
