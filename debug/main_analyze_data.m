@@ -1,40 +1,42 @@
 % main_analyze_data.m
+
 clear all;
 close all;
 clc;
 
-options.doPlot_accelerometer = false;
-options.doSave_data = true;
+addpath( './functions/' );
 
-format = '%c, %li, %i, %f, %f, %f\n';
+options.doPlot_accelerometer                = false;
+options.doPlot_gyroscope                    = false;
+options.doSave_data                         = false;
+
+% Import and MAT-export data from textfile and to MAT file
+options.doImport_From_Text_File             = false;
+options.doSave_Data_Imported_From_Text_File = false;
+
+options.doImport_Data_From_MAT_File         = true;
+
+
 
 filename = 'data_Mon Feb 16 11_54_06 2015.txt';
+c = strsplit( filename, '.' );
+filename_data_export = [ c{ 1 }, '.mat' ];
 
-f = fopen( filename, 'r' );
+% Import Data from Text file
+if( true == options.doImport_From_Text_File )
+    [array, array_types, array_types_as_numbers, array_time, array_counter, array_values] = f_doImport_From_Text_File( filename );
 
-array                   = [  ];
-array_types             = [  ];
-array_types_as_numbers  = [  ];
-array_time              = [  ];
-array_counter           = [  ];
-array_values            = [  ];
+    if( true == options.doSave_Data_Imported_From_Text_File )
+        c = strsplit( filename, '.' );
+        filename_data_export = [ c{ 1 }, '.mat' ];
+        save( filename_data_export, 'array', 'array_types',...
+            'array_types_as_numbers',...
+        'array_time', 'array_counter', 'array_values' );
+    end
+end
 
-while( ~feof( f ) )
-    s = fgets( f );
-    A = sscanf( s, format );
-    
-    type = char( A( 1 ) );
-
-    time = A( 2 );
-    counter = A( 3 );
-    vals = A( 4 : 6 )';
-    array = [array; {type, time, counter, vals}];
-    
-    array_types = [array_types, type];
-    array_types_as_numbers = [array_types_as_numbers, A( 1 )];
-    array_time = [array_time, time];
-    array_counter = [array_counter, counter];
-    array_values = [array_values; vals];
+if( true == options.doImport_Data_From_MAT_File )
+    load( filename_data_export );
 end
 
 nValues = size( array_values, 1 );
@@ -71,6 +73,15 @@ if( true == options.doPlot_accelerometer )
     plot( array_accels( :, 1 ), array_accels( :, 2 ), 'Color', 'Red' );
     plot( array_accels( :, 1 ), array_accels( :, 3 ), 'Color', 'Green' );
     plot( array_accels( :, 1 ), array_accels( :, 4 ), 'Color', 'Blue' );
+end
+
+if( true == options.doPlot_gyroscope )
+    hFig = figure;
+    set( hFig, 'Color', 'White' );
+    hold on;
+    plot( array_gyros( :, 1 ), array_gyros( :, 2 ), 'Color', 'Red' );
+    plot( array_gyros( :, 1 ), array_gyros( :, 3 ), 'Color', 'Green' );
+    plot( array_gyros( :, 1 ), array_gyros( :, 4 ), 'Color', 'Blue' );
 end
 
 % hFig2 = figure;
@@ -125,108 +136,31 @@ if( true == same_size_tf )
         fprintf( 'Saved!\n' );
     end
 
-    n = nElements_o;
-    z = zeros(n,1);
-    % corrected state vectors
-    x = zeros(n,1);
-    y = zeros(n,1);
-    z = zeros(n,1);
-    % corrected error co-variance matrix
-    P_x = ones(n,1);
-    P_y = ones(n,1);
-    P_z = ones(n,1);
-    % predicted state vectors
-    x_p = zeros(n,1);
-    x_p = zeros(n,1);
-    x_p = zeros(n,1);
-    % predicted error co-variance matrix
-    P_p_x = zeros(n,1);
-    P_p_y = zeros(n,1);
-    P_p_z = zeros(n,1);
-    %P_p(1) = 2;
-
-    % variance of disturbance noise
-    Q = .01; 
-    % variance of sensor noise
-    R = .1;
-
-    for k=1:n-1
-
-        sensor_x(k+1) = Accelerometer( k, 1 );
-        sensor_y(k+1) = Accelerometer( k, 2 );
-        sensor_z(k+1) = Accelerometer( k, 3 );
-
-
-        % Z axis
-        % prediction
-
-        z_p(k+1) = z(k);
-        P_p_z(k+1) = P_z(k) + Q;
-
-        % correction
-
-        K_z = P_p_z(k+1)/(P_p_z(k+1) + R);
-        z(k+1) = z_p(k+1) + K_z*(sensor_z(k+1) - z_p(k+1));
-        P_z(k+1) = (1 - K_z)* P_p_z(k+1);
-
-        % plotting
-
-        title('Z axis accelerometer ');
-        subplot(3,1,1);
-        plot(k,z(k),'-ro',k,sensor_z(k), '-b*');
-        axis([0 k+10 0 20]);
-        pause(.0001);
-        drawnow
-        grid on
-        hold on;
-
-        % Y axis
-        % prediction
-
-        y_p(k+1) = y(k);
-        P_p_y(k+1) = P_y(k) + Q;
-
-        % correction
-
-        K_y = P_p_y(k+1)/(P_p_y(k+1) + R);
-        y(k+1) = y_p(k+1) + K_y*(sensor_y(k+1) - y_p(k+1));
-        P_y(k+1) = (1 - K_y)* P_p_y(k+1);
-
-        % plotting
-
-        title('Y axis accelerometer ');
-        subplot(3,1,2);
-        plot(k,y(k),'-ro',k,sensor_y(k), '-b*');
-        axis([0 k+10 0 20]);
-        pause(.0001);
-        drawnow
-        grid on
-        hold on;
-
-        % X axis
-        % prediction
-
-        x_p(k+1) = x(k);
-        P_p_x(k+1) = P_x(k) + Q;
-
-        % correction
-
-        K_x = P_p_x(k+1)/(P_p_x(k+1) + R);
-        x(k+1) = x_p(k+1) + K_x*(sensor_x(k+1) - x_p(k+1));
-        P_x(k+1) = (1 - K_x)* P_p_x(k+1);
-
-        % plotting
-
-        title('X axis accelerometer ');
-        subplot(3,1,3);
-        plot(k,x(k),'-ro',k,sensor_x(k), '-b*');
-        axis([0 k+10 0 20]);
-        pause(.0001);
-        drawnow
-        grid on
-        hold on;
-
-    end
+    [x, y, z] = f_Apply_Simple_Kalman_Filter( array_accels( :, 2 : 1 : 4 ) );
+    hFig = figure;
+    set( hFig, 'Color', 'White' );
     
+    kalman.color = 'Black';
+    kalman.LineStyle = ':';
+    kalman.LineWidth = 2;
+    nRows = 3;
+    nCols = 1;
     
+    plot_idx = 1; sig = x;
+    subplot( nRows, nCols, plot_idx );
+    hold on;
+    plot( array_accels( :, 2 ), 'Color', 'Red' );
+    plot( sig, 'Color', kalman.color, 'LineStyle', kalman.LineStyle, 'LineWidth', kalman.LineWidth );
+    
+    plot_idx = 2; sig = y;
+    subplot( nRows, nCols, plot_idx );
+    hold on;
+    plot( array_accels( :, 3 ), 'Color', 'Green' );
+    plot( sig, 'Color', kalman.color, 'LineStyle', kalman.LineStyle, 'LineWidth', kalman.LineWidth );
+    
+    plot_idx = 3; sig = z;
+    subplot( nRows, nCols, plot_idx );
+    hold on;
+    plot( array_accels( :, 4 ), 'Color', 'Blue' );
+    plot( sig, 'Color', kalman.color, 'LineStyle', kalman.LineStyle, 'LineWidth', kalman.LineWidth );
 end
