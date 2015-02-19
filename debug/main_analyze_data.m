@@ -15,16 +15,19 @@ options.doImport_From_Text_File             = false;
 options.doSave_Data_Imported_From_Text_File = false;
 
 options.doImport_Data_From_MAT_File         = true;
-
+options.doApply_conversion_factors          = false;
 
 
 filename = 'data_Mon Feb 16 11_54_06 2015.txt';
 c = strsplit( filename, '.' );
 filename_data_export = [ c{ 1 }, '.mat' ];
 
+directory = './';
+filenameRenamedData = '02_16_2015.mat';
+
 % Import Data from Text file
 if( true == options.doImport_From_Text_File )
-    [array, array_types, array_types_as_numbers, array_time, array_counter, array_values] = f_doImport_From_Text_File( filename );
+    [~, array_types, array_types_as_numbers, array_time, array_counter, array_values] = f_doImport_From_Text_File( filename );
 
     if( true == options.doSave_Data_Imported_From_Text_File )
         c = strsplit( filename, '.' );
@@ -120,23 +123,28 @@ nElements_o = size( array_gyros( :, 1 ), 1 );
 
 same_size_tf = ( ( nElements_a == nElements_m ) && ( nElements_m == nElements_o ) );
 if( true == same_size_tf )
-    directory = 'C:\Users\djulzz\Desktop\madgwick_algorithm_matlab\';
-    filename = '02_16_2015.mat';
+
     A_SI_to_Gs = ( 1 / 9.81 );
     G_SI_to_DegS = ( 180 / pi );
     uT_to_Gauss = 0.01;
     ms_to_Sec = ( 1 / 1000 );
     % 1 Tesla = 10 000 Gauss
-    Accelerometer   = A_SI_to_Gs * array_accels( :, 2 : 1 : 4 ); % m / s / s
-    Gyroscope       = G_SI_to_DegS * array_gyros( :, 2 : 1 : 4 ); % rad / s
-    Magnetometer    = uT_to_Gauss * array_mag( :, 2 : 1 : 4 ); % Micro Tesla
-    time            = ms_to_Sec * linspace( lower_t, upper_t, nElements_o);
+    Accelerometer   = array_accels( :, 2 : 1 : 4 ); % m / s / s
+    Gyroscope       = array_gyros( :, 2 : 1 : 4 ); % rad / s
+    Magnetometer    = array_mag( :, 2 : 1 : 4 ); % Micro Tesla
+    time            = ms_to_Sec * linspace( lower_t, upper_t, nElements_o );
+    if( true == options.doApply_conversion_factors )
+        Accelerometer   = A_SI_to_Gs * Accelerometer; % Gs
+        Gyroscope       = G_SI_to_DegS * Gyroscope; % deg / s
+        Magnetometer    = uT_to_Gauss * Magnetometer; % Gauss
+    end
+    
     if( true == options.doSave_data )
         save( [directory ,filename], 'Accelerometer', 'Gyroscope', 'Magnetometer','time' );
         fprintf( 'Saved!\n' );
     end
 
-    [x, y, z] = f_Apply_Simple_Kalman_Filter( array_accels( :, 2 : 1 : 4 ) );
+    [x, y, z] = f_Apply_Simple_Kalman_Filter3( array_accels( :, 2 : 1 : 4 ) );
     hFig = figure;
     set( hFig, 'Color', 'White' );
     
